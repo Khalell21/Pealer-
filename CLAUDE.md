@@ -30,3 +30,10 @@ Vérifie la « Definition of Done » du README (§5) et lance :
 gitleaks dir . --redact
 semgrep scan --config p/default --config p/secrets --severity ERROR --error .
 ```
+
+## Prompts système et IA
+- Un prompt système est un secret serveur (secret de l'Edge Function), jamais dans `./app` ni dans git
+  (`prompts/private/` est ignoré). Les appels au modèle passent uniquement par une Edge Function.
+- Ne jamais logger le contenu des conversations ; l'app dit explicitement qu'on parle à une IA.
+- Pour une app de soutien psychologique : la ressource de crise et le bouton d'urgence ne sont jamais derrière le paywall,
+  et le filet déterministe `supabase/functions/_shared/crisis.ts` ne se retire pas.

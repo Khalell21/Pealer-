@@ -15,6 +15,9 @@
 | `.github/workflows/security.yml` | CI : gitleaks (historique complet) + Semgrep + `npm audit` |
 | `supabase/migrations/…_rls_baseline.sql` | Modèle de table avec RLS + policies « propriétaire uniquement » |
 | `supabase/functions/delete-account/` | Edge Function de suppression de compte (stockage + RevenueCat + auth) |
+| `supabase/functions/chat/` | Edge Function de conversation : appelle Claude avec le prompt système gardé côté serveur |
+| `supabase/functions/_shared/crisis.ts` | Filet de crise déterministe (détection + numéros par pays), indépendant du modèle |
+| `prompts/private/` | Prompts propriétaires — **ignoré par git** (le dépôt est public) |
 
 ---
 
@@ -144,7 +147,19 @@ La CI (`.github/workflows/security.yml`) refait gitleaks sur **tout l'historique
 7. [ ] Écran consentement + suppression de compte présents
 8. [ ] `.env` ignoré (`git check-ignore .env` → `.env`)
 
-## 6. ➡️ Générer une app
+## 6. 🔑 Secrets de l'Edge Function `chat`
+
+```bash
+# Clé API Anthropic : via un fichier (jamais en clair dans l'historique du shell)
+echo "ANTHROPIC_API_KEY=..." > supabase/functions/.env     # ignoré par git
+npx supabase secrets set --env-file supabase/functions/.env
+# Prompt système propriétaire
+npx supabase secrets set PSAI_SYSTEM_PROMPT="$(cat prompts/private/psai-gpt-v3.md)"
+npx supabase functions deploy chat
+```
+> Les appels à l'API Claude partent hors UE : DPA Anthropic + clauses contractuelles types, à mentionner dans la politique de confidentialité.
+
+## 7. ➡️ Générer une app
 
 1. Remplis **`PROMPT.md`**.
 2. Dans Claude Code : *« Génère l'app décrite dans PROMPT.md dans ./app en respectant CLAUDE.md. »*
