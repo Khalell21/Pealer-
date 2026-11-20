@@ -1,0 +1,24 @@
+# Règles gitleaks par défaut + règles propres au stack Supabase/RevenueCat.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-service-role-jwt"
+description = "JWT Supabase service_role (ne doit JAMAIS être dans le dépôt)"
+regex = '''eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]*c2VydmljZV9yb2xl[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{10,}'''
+keywords = ["eyj"]
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Clé secrète Supabase (nouveau format sb_secret_)"
+regex = '''sb_secret_[A-Za-z0-9_-]{20,}'''
+keywords = ["sb_secret_"]
+
+[[rules]]
+id = "revenuecat-secret-key"
+description = "Clé secrète API RevenueCat (sk_) — backend uniquement"
+regex = '''\bsk_[A-Za-z0-9]{24,}\b'''
+keywords = ["sk_"]
+
+[allowlist]
+paths = ['''\.env\.example$''']
