@@ -1,0 +1,16 @@
+#!/bin/sh
+# Bloque le commit si un secret est détecté dans les fichiers indexés.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "❌ gitleaks introuvable — installe-le (voir README §1.6). Commit bloqué."
+  exit 1
+fi
+gitleaks git --staged --redact -v || {
+  echo "❌ Secret détecté — commit bloqué. Retire-le, et s'il a déjà fuité ailleurs : RÉVOQUE + RÉGÉNÈRE la clé."
+  exit 1
+}
+
+# Garde-fou spécifique Expo : aucune clé secrète exposée via EXPO_PUBLIC_
+if git diff --cached -U0 | grep -E '^\+' | grep -iE 'EXPO_PUBLIC_[A-Z_]*(SERVICE_ROLE|SECRET|PRIVATE)' >/dev/null; then
+  echo "❌ Variable EXPO_PUBLIC_ contenant SERVICE_ROLE/SECRET/PRIVATE — elle finirait dans le bundle. Commit bloqué."
+  exit 1
+fi
