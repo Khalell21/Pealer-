@@ -1,4 +1,4 @@
-# PROMPT — app « PSAI » (soutien psychologique par IA)
+# PROMPT — app « PsyGPT » (soutien psychologique par IA)
 
 > Demande à l'agent : « Génère l'app décrite dans PROMPT.md dans ./app en respectant CLAUDE.md ».
 
@@ -8,9 +8,9 @@ Le prompt système **PSAI GPT V3** est propriétaire : il vit dans `prompts/priv
 **L'app ne contient jamais le prompt** : elle appelle l'Edge Function `chat`.
 
 ## L'app
-- **Nom** : à choisir — éviter « GPT » (marque d'OpenAI, et l'app tourne sur Claude).
-- **Public cible** : adultes cherchant une écoute (anxiété, couple, deuil, burn-out, isolement…).
-  Mineurs : décision ouverte (voir « Décisions à prendre »).
+- **Nom** : PsyGPT (nom de travail, choix du porteur de projet).
+- **Public cible** : adultes ET mineurs cherchant une écoute (anxiété, couple, deuil, burn-out, isolement…).
+  Mineur déclaré → module adolescents permanent (verrouillé en base) + ligne jeunesse du pays.
 - **Problème résolu** : un espace d'écoute disponible à tout moment, qui oriente vers l'humain et les pros.
 - **Écrans** :
   1. Onboarding : « Tu parles à une IA, pas à un professionnel » + pays + âge déclaré + consentement explicite au traitement de données de santé.
@@ -31,7 +31,8 @@ Le prompt système **PSAI GPT V3** est propriétaire : il vit dans `prompts/priv
 - Stockage serveur des conversations, entraînement sur les conversations.
 - Notifications « reviens me parler » (renforcent la dépendance).
 
-## Décisions à prendre
-- [ ] Mineurs autorisés ? (sinon : âge minimum 18 ans et blocage à l'onboarding)
-- [ ] Prix / quota gratuit.
-- [ ] Nom définitif.
+## Décisions
+- [x] Mineurs acceptés (module adolescents du prompt).
+- [ ] Moins de 15 ans en France : consentement parental requis (RGPD + loi française) — parcours à ajouter, ou âge minimum 15 ans.
+- [ ] Prix / quota gratuit : à fixer après mesure du coût réel (`FREE_MESSAGES_PER_DAY`, 0 = illimité).
+- [ ] Vérifier chaque numéro de `supabase/functions/_shared/crisis.ts` avant lancement.

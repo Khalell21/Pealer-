@@ -32,6 +32,19 @@ jobs:
       - name: Semgrep (bloquant sur ERROR)
         run: semgrep scan --config p/default --config p/typescript --config p/react --config p/secrets --severity ERROR --error .
 
+  consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Table de crise app == serveur
+        run: ./scripts/sync-crisis.sh --check
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check des Edge Functions
+        working-directory: supabase/functions
+        run: deno check chat/index.ts delete-account/index.ts
+
   npm-audit:
     runs-on: ubuntu-latest
     steps:

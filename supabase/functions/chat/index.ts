@@ -11,15 +11,22 @@ const MODEL = "claude-opus-5-5";
 const MAX_TURNS = 60;            // messages d'historique acceptés
 const MAX_CHARS_PER_MSG = 8000;
 
-const anthropic = new Anthropic(); // lit ANTHROPIC_API_KEY (secret de la fonction)
-const SYSTEM_PROMPT = Deno.env.get("PSAI_SYSTEM_PROMPT") ?? "";
+// Sans clé : l'app reste utilisable en mode dégradé (message sûr + ressource de crise).
+const anthropic = Deno.env.get("ANTHROPIC_API_KEY") ? new Anthropic() : null;
 
-type ChatBody = {
-  messages: Anthropic.MessageParam[];
-  country?: string;          // ISO alpha-2, issu des réglages de l'app
-  declared_minor?: boolean;  // déclaré à l'onboarding — active le module adolescents
-  active_days_30d?: number;  // compteur d'usage (pas de contenu) — alimente le garde-fou dépendance
-};
+// Prompt système en base64 (PSAI_SYSTEM_PROMPT_B64) pour survivre aux fichiers .env et à `secrets set`.
+const SYSTEM_PROMPT = decodePrompt();
+
+function decodePrompt(): string {
+  const b64 = Deno.env.get("PSAI_SYSTEM_PROMPT_B64");
+  if (b64) return new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+  return Deno.env.get("PSAI_SYSTEM_PROMPT") ?? "";
+}
+
+// Quota gratuit par jour (0 = illimité). Le prix n'est pas encore fixé : réglable sans redéployer le code.
+const FREE_MESSAGES_PER_DAY = Number(Deno.env.get("FREE_MESSAGES_PER_DAY") ?? "0");
+
+type ChatBody = { messages: Anthropic.MessageParam[] };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -44,18 +51,38 @@ Deno.serve(async (req) => {
   }
   const messages = sanitize(body.messages);
   if (!messages) return json({ error: "invalid_messages" }, 400);
-  const country = typeof body.country === "string" && /^[A-Za-z]{2}$/.test(body.country) ? body.country : undefined;
+  // Pays et statut mineur lus en base (déclarés à l'onboarding), pas envoyés par l'app à chaque appel.
+  const { data: profile } = await supabase.from("profiles").select("country, is_minor").eq("id", user.id).single();
+  const country: string | undefined = profile?.country ?? undefined;
+  const minor = profile?.is_minor === true;
+
+  // Compteur d'usage (sans contenu), côté serveur.
+  const { data: usage, error: usageError } = await supabase.rpc("record_message").single<{ messages_today: number; active_days_30d: number }>();
+  if (usageError || !usage) return json({ error: "usage_unavailable" }, 500);
 
   const lastUser = textOf(messages[messages.length - 1]);
   const highRisk = isHighRisk(lastUser);
 
   // 3) Contexte opérateur variable APRÈS le prompt fixe (le prompt fixe reste en cache).
-  const context: string[] = [`Pays de l'utilisateur : ${country ?? "inconnu"}. Ressource de crise adaptée : ${crisisResource(country)}`];
-  if (body.declared_minor) context.push("L'utilisateur a déclaré être mineur : module adolescents actif, de façon permanente.");
-  if (typeof body.active_days_30d === "number" && body.active_days_30d >= 20) {
-    context.push(`L'utilisateur a utilisé l'app ${Math.floor(body.active_days_30d)} jours sur les 30 derniers : applique le garde-fou de prévention de la dépendance.`);
+  // Le quota ne bloque JAMAIS un message de crise.
+  if (FREE_MESSAGES_PER_DAY > 0 && usage.messages_today > FREE_MESSAGES_PER_DAY && !highRisk) {
+    // TODO RevenueCat : vérifier l'entitlement côté serveur avant de refuser.
+    return json({ error: "quota_reached", crisis_resource: crisisResource(country, minor) }, 402);
+  }
+
+  const context: string[] = [
+    `Pays de l'utilisateur : ${country ?? "inconnu"}. Ressources à utiliser en cas de crise : ${crisisResource(country, minor)}`,
+  ];
+  if (minor) context.push("L'utilisateur a déclaré être mineur : module adolescents actif, de façon permanente.");
+  if (usage.active_days_30d >= 20) {
+    context.push(`L'utilisateur a utilisé l'app ${usage.active_days_30d} jours sur les 30 derniers : applique le garde-fou de prévention de la dépendance.`);
   }
   if (highRisk) context.push("Signal de risque élevé détecté dans le dernier message : applique le protocole de crise.");
+
+  if (!anthropic) {
+    console.error("anthropic_key_missing");
+    return json({ reply: safeFallbackReply(country, minor), crisis: highRisk, degraded: true }, 200);
+  }
 
   try {
     const response = await anthropic.beta.messages.create({
@@ -64,6 +91,7 @@ Deno.serve(async (req) => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
+      cache_control: { type: "ephemeral" }, // met aussi l'historique en cache (coût ÷ ~10 sur la partie relue)
       system: [
         { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
         { type: "text", text: context.join("\n") },
@@ -72,21 +100,21 @@ Deno.serve(async (req) => {
     });
 
     if (response.stop_reason === "refusal") {
-      return json({ reply: safeFallbackReply(country), crisis: true }, 200);
+      return json({ reply: safeFallbackReply(country, minor), crisis: true }, 200);
     }
     let reply = response.content
       .flatMap((b) => (b.type === "text" ? [b.text] : []))
       .join("")
       .trim();
-    if (!reply) reply = safeFallbackReply(country);
+    if (!reply) reply = safeFallbackReply(country, minor);
 
     // Filet déterministe : en cas de risque élevé, la ressource est TOUJOURS affichée par l'app.
-    return json({ reply, crisis: highRisk, crisis_resource: highRisk ? crisisResource(country) : undefined }, 200);
+    return json({ reply, crisis: highRisk, crisis_resource: highRisk ? crisisResource(country, minor) : undefined }, 200);
   } catch (err) {
     // Ne jamais logger le contenu de la conversation.
     const status = err instanceof Anthropic.APIError ? err.status : "network";
     console.error("anthropic_error", status);
-    return json({ reply: safeFallbackReply(country), crisis: highRisk, degraded: true }, 200);
+    return json({ reply: safeFallbackReply(country, minor), crisis: highRisk, degraded: true }, 200);
   }
 });
 

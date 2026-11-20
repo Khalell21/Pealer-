@@ -154,12 +154,29 @@ La CI (`.github/workflows/security.yml`) refait gitleaks sur **tout l'historique
 echo "ANTHROPIC_API_KEY=..." > supabase/functions/.env     # ignoré par git
 npx supabase secrets set --env-file supabase/functions/.env
 # Prompt système propriétaire
-npx supabase secrets set PSAI_SYSTEM_PROMPT="$(cat prompts/private/psai-gpt-v3.md)"
+npx supabase secrets set PSAI_SYSTEM_PROMPT_B64="$(base64 -w0 prompts/private/psai-gpt-v3.md)"
 npx supabase functions deploy chat
 ```
 > Les appels à l'API Claude partent hors UE : DPA Anthropic + clauses contractuelles types, à mentionner dans la politique de confidentialité.
 
-## 7. ➡️ Générer une app
+## 7. 🧪 Lancer PsyGPT en local
+
+```bash
+npm install && (cd app && npm install)
+npx supabase start                         # Docker requis ; applique les migrations
+printf 'PSAI_SYSTEM_PROMPT_B64=%s\nFREE_MESSAGES_PER_DAY=0\nANTHROPIC_API_KEY=%s\n' \
+  "$(base64 -w0 prompts/private/psai-gpt-v3.md)" "ta-cle" > supabase/functions/.env   # ignoré par git
+npx supabase functions serve --env-file supabase/functions/.env   # fonctions dans Docker
+cp app/.env.example app/.env               # puis colle ANON_KEY (npx supabase status) ; vide CHAT_URL/DELETE_ACCOUNT_URL
+cd app && npx expo start                   # i = iOS, a = Android, w = navigateur
+```
+- Emails de confirmation : Mailpit sur http://127.0.0.1:54324 · base : Studio sur http://127.0.0.1:54323
+- Si le conteneur des fonctions n'a pas de réseau : `./scripts/dev-function.sh` (chat sur :8000) et
+  `DENO_SERVE_ADDRESS=tcp:127.0.0.1:8001 ./scripts/dev-function.sh delete-account`, avec les URL de `app/.env.example`.
+- Sans `ANTHROPIC_API_KEY`, l'app marche en mode dégradé : message sûr + numéros d'aide du pays.
+- Après modification de `supabase/functions/_shared/crisis.ts` : `./scripts/sync-crisis.sh`.
+
+## 8. ➡️ Générer une app
 
 1. Remplis **`PROMPT.md`**.
 2. Dans Claude Code : *« Génère l'app décrite dans PROMPT.md dans ./app en respectant CLAUDE.md. »*

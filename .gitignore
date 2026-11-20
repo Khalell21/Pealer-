@@ -33,3 +33,6 @@ supabase/.temp/
 
 # --- Prompts propriétaires (dépôt public !) ---
 prompts/private/
+
+# Captures de test locales
+screenshots/
