@@ -3,10 +3,13 @@
 // Le system prompt demande déjà au modèle de gérer les crises ; ce module garantit que,
 // même si le modèle répond mal, refuse ou plante, l'utilisateur voit une ressource d'aide.
 //
-// ⚠️ À VÉRIFIER AVANT LANCEMENT : ces numéros n'ont pas pu être recoupés avec une source en ligne
-// au moment de l'écriture. Chaque ligne doit être vérifiée (site officiel de l'organisme) et revue
-// au moins une fois par an. Un pays absent retombe sur 112 + findahelpline.com, jamais sur un
-// numéro d'un autre pays.
+// Vérification du 2026-11-22 :
+// - Lignes de crise des 21 pays recoupées avec Wikipedia « List of suicide crisis lines » (révision du 2026-11-04).
+// - Écarts tranchés par les sites officiels : PT 1411 (sns24.gov.pt), IT 02 2327 2327 (telefonoamico.it),
+//   BE 0800 32 123 (preventionsuicide.be), 107 (centredecrise.be), 1813 (vlaanderen.be).
+// - ⚠️ ENCORE À VÉRIFIER : lignes jeunesse (119, Fil Santé Jeunes, 147, 116 111) et numéros d'urgence
+//   hors 112. À revoir au moins une fois par an.
+// Un pays absent retombe sur 112 + findahelpline.com, jamais sur un numéro d'un autre pays.
 
 const HIGH_RISK_PATTERNS: RegExp[] = [
   /mieux sans moi/i,
@@ -35,14 +38,14 @@ const EU_YOUTH = "116 111 (ligne d'aide pour enfants et ados)";
 // Clé : code pays ISO 3166-1 alpha-2.
 const LINES: Record<string, CountryLines> = {
   FR: { emergency: "112 (ou 15 SAMU)", crisis: "3114 (prévention du suicide, 24h/24, gratuit)", youth: "119 (enfance en danger) ou Fil Santé Jeunes 0 800 235 236" },
-  BE: { emergency: "112", crisis: "0800 32 123 (Centre de Prévention du Suicide) ou 1813 (Zelfmoordlijn)", youth: EU_YOUTH },
+  BE: { emergency: "112", crisis: "0800 32 123 (Centre de Prévention du Suicide), 1813 (Zelfmoordlijn) ou 107 (Télé-Accueil)", youth: EU_YOUTH },
   CH: { emergency: "144 (ambulance) ou 112", crisis: "143 (La Main Tendue)", youth: "147 (Pro Juventute)" },
   LU: { emergency: "112", crisis: "45 45 45 (SOS Détresse)", youth: EU_YOUTH },
-  DE: { emergency: "112", crisis: "0800 111 0 111 ou 0800 111 0 222 (TelefonSeelsorge)", youth: EU_YOUTH },
+  DE: { emergency: "112", crisis: "0800 111 0 111, 0800 111 0 222 ou 116 123 (TelefonSeelsorge)", youth: EU_YOUTH },
   AT: { emergency: "112", crisis: "142 (TelefonSeelsorge)", youth: EU_YOUTH },
   ES: { emergency: "112", crisis: "024 (línea de atención a la conducta suicida)", youth: EU_YOUTH },
   IT: { emergency: "112", crisis: "02 2327 2327 (Telefono Amico)", youth: EU_YOUTH },
-  PT: { emergency: "112", crisis: "808 24 24 24 (SNS 24, aconselhamento psicológico)", youth: EU_YOUTH },
+  PT: { emergency: "112", crisis: "1411 (Linha Nacional de Prevenção do Suicídio)", youth: EU_YOUTH },
   NL: { emergency: "112", crisis: "113 ou 0800-0113 (113 Zelfmoordpreventie)", youth: EU_YOUTH },
   IE: { emergency: "112 ou 999", crisis: "116 123 (Samaritans)", youth: EU_YOUTH },
   GB: { emergency: "999 ou 112", crisis: "116 123 (Samaritans)" },

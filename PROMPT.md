@@ -35,4 +35,5 @@ Le prompt système **PSAI GPT V3** est propriétaire : il vit dans `prompts/priv
 - [x] Mineurs acceptés (module adolescents du prompt).
 - [ ] Moins de 15 ans en France : consentement parental requis (RGPD + loi française) — parcours à ajouter, ou âge minimum 15 ans.
 - [ ] Prix / quota gratuit : à fixer après mesure du coût réel (`FREE_MESSAGES_PER_DAY`, 0 = illimité).
-- [ ] Vérifier chaque numéro de `supabase/functions/_shared/crisis.ts` avant lancement.
+- [x] Lignes de crise des 21 pays vérifiées (2026-11-22, sources en tête de `crisis.ts`).
+- [ ] Vérifier les lignes jeunesse et les numéros d'urgence hors 112.
