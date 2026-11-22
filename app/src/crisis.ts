@@ -7,7 +7,8 @@
 // - Lignes de crise des 21 pays recoupées avec Wikipedia « List of suicide crisis lines » (révision du 2026-11-04).
 // - Écarts tranchés par les sites officiels : PT 1411 (sns24.gov.pt), IT 02 2327 2327 (telefonoamico.it),
 //   BE 0800 32 123 (preventionsuicide.be), 107 (centredecrise.be), 1813 (vlaanderen.be).
-// - ⚠️ ENCORE À VÉRIFIER : lignes jeunesse (119, Fil Santé Jeunes, 147, 116 111) et numéros d'urgence
+// - FR jeunesse : 3018 (e-enfance.org) et 119 (info.gouv.fr).
+// - ⚠️ ENCORE À VÉRIFIER : lignes jeunesse hors France (147, 116 111) et numéros d'urgence
 //   hors 112. À revoir au moins une fois par an.
 // Un pays absent retombe sur 112 + findahelpline.com, jamais sur un numéro d'un autre pays.
 
@@ -37,7 +38,7 @@ const EU_YOUTH = "116 111 (ligne d'aide pour enfants et ados)";
 
 // Clé : code pays ISO 3166-1 alpha-2.
 const LINES: Record<string, CountryLines> = {
-  FR: { emergency: "112 (ou 15 SAMU)", crisis: "3114 (prévention du suicide, 24h/24, gratuit)", youth: "119 (enfance en danger) ou Fil Santé Jeunes 0 800 235 236" },
+  FR: { emergency: "112 (ou 15 SAMU)", crisis: "3114 (prévention du suicide, 24h/24, gratuit)", youth: "119 (enfant en danger) ou 3018 (harcèlement et cyberharcèlement, 7j/7 de 9h à 23h, gratuit)" },
   BE: { emergency: "112", crisis: "0800 32 123 (Centre de Prévention du Suicide), 1813 (Zelfmoordlijn) ou 107 (Télé-Accueil)", youth: EU_YOUTH },
   CH: { emergency: "144 (ambulance) ou 112", crisis: "143 (La Main Tendue)", youth: "147 (Pro Juventute)" },
   LU: { emergency: "112", crisis: "45 45 45 (SOS Détresse)", youth: EU_YOUTH },
