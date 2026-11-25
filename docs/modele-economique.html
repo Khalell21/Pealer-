@@ -1,0 +1,341 @@
+<title>Modèle économique PsyGPT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : une colonne de « registres » comptables — hypothèses éditables à gauche du calcul, résultat en tête. */
+:root {
+  --bg: #F3F5F3; --surface: #FFFFFF; --ink: #1B2622; --muted: #5E6B66; --line: #DCE3DF;
+  --accent: #2F6B5E; --accent-soft: #E1EEEA; --input: #F8FBF9;
+  --good: #1E7A4C; --good-soft: #E2F3EA; --warn: #9A6400; --warn-soft: #FBF0DC; --bad: #B3261E; --bad-soft: #FBE7E5;
+  --display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121816; --surface: #1A2320; --ink: #E4ECE8; --muted: #9AA9A3; --line: #2C3833;
+  --accent: #7CC4B0; --accent-soft: #1F332D; --input: #141C19;
+  --good: #6FD39C; --good-soft: #17301F; --warn: #E8B860; --warn-soft: #33280F; --bad: #F08A80; --bad-soft: #3A1B18; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #1A2320; --ink: #E4ECE8; --muted: #9AA9A3; --line: #2C3833;
+  --accent: #7CC4B0; --accent-soft: #1F332D; --input: #141C19;
+  --good: #6FD39C; --good-soft: #17301F; --warn: #E8B860; --warn-soft: #33280F; --bad: #F08A80; --bad-soft: #3A1B18; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; }
+h2 { font-size: 20px; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.lead { color: var(--muted); }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 600; }
+header { display: grid; gap: 8px; }
+section { display: grid; gap: 12px; }
+.note { font-size: 13px; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+
+/* Résultat en tête */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; }
+.kpi .label { font-size: 13px; color: var(--muted); }
+.kpi .value { font-family: var(--mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.verdict { border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-weight: 600; }
+.verdict.good { background: var(--good-soft); color: var(--good); }
+.verdict.warn { background: var(--warn-soft); color: var(--warn); }
+.verdict.bad { background: var(--bad-soft); color: var(--bad); }
+
+/* Tableaux */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface); position: sticky; top: 0; }
+td:first-child, th:first-child { text-align: left; }
+tr:last-child td { border-bottom: 0; }
+td.calc { font-family: var(--mono); font-size: 13px; }
+td .sub { display: block; font-size: 12px; color: var(--muted); font-family: var(--body); white-space: normal; max-width: 26ch; }
+tfoot td { font-weight: 600; background: var(--accent-soft); }
+
+input[type="number"], select {
+  font: inherit; font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--input);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; width: 84px; text-align: right;
+}
+select { width: auto; text-align: left; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; font-family: var(--body); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.neg { color: var(--bad); }
+.pos { color: var(--good); }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.field:last-child { border-bottom: 0; }
+.field label { min-width: 0; }
+.field .src { display: block; font-size: 12px; color: var(--muted); }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+button { font: inherit; font-weight: 600; font-size: 14px; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); }
+button.primary { background: var(--accent); color: var(--surface); }
+ul.rules { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 80ch; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">PsyGPT · calculateur</span>
+    <h1>Modèle économique PsyGPT</h1>
+    <p class="lead">Chaque case blanche est une hypothèse modifiable ; tout le reste se recalcule. Les prix des services (Anthropic, Supabase, RevenueCat, Expo) sont ceux relevés le 25 novembre 2026 ; les coûts par message sont <strong>estimés</strong> et seront remplacés par la mesure réelle dès que la clé API sera branchée. Les nombres d'utilisateurs sont un <strong>exemple</strong>, pas une prévision.</p>
+  </header>
+
+  <section aria-labelledby="t-res">
+    <h2 id="t-res">Résultat du mois</h2>
+    <div id="verdict" class="verdict"></div>
+    <div class="summary" id="kpis"></div>
+  </section>
+
+  <section aria-labelledby="t-model">
+    <h2 id="t-model">1. Coût d'un message selon le modèle</h2>
+    <p class="note">Un message = le prompt PsyGPT (mis en cache) + l'historique de la conversation + la réponse. Le seuil « inclus » est ta règle : au-delà de 0,1 centime par message, c'est hors forfait.</p>
+    <div class="grid2">
+      <div class="panel">
+        <div class="field"><label for="tokPrompt">Prompt système<span class="src">tokens, estimation (≈ 13 500 caractères)</span></label><input type="number" id="tokPrompt" value="4500" step="100"></div>
+        <div class="field"><label for="tokHist">Historique moyen relu<span class="src">tokens par message</span></label><input type="number" id="tokHist" value="2500" step="100"></div>
+        <div class="field"><label for="tokNew">Nouveaux tokens par message<span class="src">message + réponse précédente</span></label><input type="number" id="tokNew" value="500" step="50"></div>
+        <div class="field"><label for="tokOut">Réponse générée<span class="src">tokens (réponse + réflexion interne)</span></label><input type="number" id="tokOut" value="550" step="50"></div>
+        <div class="field"><label for="cacheHit">Taux de cache<span class="src">% de la partie relue servie depuis le cache</span></label><input type="number" id="cacheHit" value="70" step="5"></div>
+        <div class="field"><label for="usdEur">1 dollar =<span class="src">euros (hypothèse)</span></label><input type="number" id="usdEur" value="0.92" step="0.01"></div>
+      </div>
+      <div class="scroll">
+        <table aria-label="Coût par message">
+          <thead><tr><th>Modèle</th><th>Entrée $/M</th><th>Sortie $/M</th><th>Coût / message</th><th>Règle 0,1 c</th></tr></thead>
+          <tbody id="modelRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-plans">
+    <h2 id="t-plans">2. Les offres</h2>
+    <p class="note">Prix TTC pour les particuliers (TVA 20 % puis commission du store sur le prix hors taxe). L'offre Entreprise est facturée directement, en hors taxe, sans commission de store. « Utilisation » = part moyenne du quota réellement consommée ; le pire cas suppose 100 %. Les colonnes % Sonnet et % Opus donnent le mélange de modèles de l'offre ; le reste des messages passe par Haiku.</p>
+    <div class="scroll">
+      <table aria-label="Offres">
+        <thead><tr>
+          <th>Offre</th><th>Prix / mois</th><th>Messages / jour</th><th>% Sonnet</th><th>% Opus</th><th>Utilisation</th><th>Utilisateurs</th>
+          <th>Net encaissé</th><th>Coût IA moyen</th><th>Marge moyenne</th><th>Marge pire cas</th>
+        </tr></thead>
+        <tbody id="planRows"></tbody>
+        <tfoot><tr><td>Total offres</td><td></td><td></td><td></td><td></td><td></td><td class="calc" id="totUsers"></td><td class="calc" id="totNet"></td><td class="calc" id="totCost"></td><td class="calc" id="totMargin"></td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-extra">
+    <h2 id="t-extra">3. Recharges, hors forfait et crises</h2>
+    <div class="grid2">
+      <div class="panel">
+        <div class="field"><label for="rechPrice">Recharge : prix TTC</label><input type="number" id="rechPrice" value="2.49" step="0.1"></div>
+        <div class="field"><label for="rechMsgs">Recharge : messages Haiku inclus</label><input type="number" id="rechMsgs" value="50" step="5"></div>
+        <div class="field"><label for="rechCount">Recharges vendues par mois</label><input type="number" id="rechCount" value="40" step="5"></div>
+        <div class="field"><label for="ovSonnet">Hors forfait Sonnet : prix par message<span class="src">€, prélevé sur un crédit prépayé</span></label><input type="number" id="ovSonnet" value="0.05" step="0.01"></div>
+        <div class="field"><label for="ovOpus">Hors forfait Opus : prix par message</label><input type="number" id="ovOpus" value="0.10" step="0.01"></div>
+        <div class="field"><label for="ovCount">Messages hors forfait par mois<span class="src">tous utilisateurs, moitié Sonnet / moitié Opus</span></label><input type="number" id="ovCount" value="500" step="50"></div>
+        <div class="field"><label for="crisisPct">Part des messages en crise<span class="src">% — toujours traités par Opus, jamais facturés</span></label><input type="number" id="crisisPct" value="2" step="0.5"></div>
+      </div>
+      <div class="panel" id="extraOut"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-fixed">
+    <h2 id="t-fixed">4. Coûts fixes et de lancement</h2>
+    <div class="grid2">
+      <div class="panel">
+        <strong>Par mois</strong>
+        <div class="field"><label for="fxSupabase">Supabase Pro<span class="src">25 $ — relevé supabase.com/pricing (100 000 utilisateurs actifs inclus)</span></label><input type="number" id="fxSupabase" value="25" step="1"></div>
+        <div class="field"><label for="fxExpo">Expo EAS<span class="src">0 $ (gratuit), 19 $ ou 199 $ — relevé expo.dev/pricing</span></label><input type="number" id="fxExpo" value="0" step="1"></div>
+        <div class="field"><label for="fxApple">Compte développeur Apple<span class="src">99 $/an, ramené au mois</span></label><input type="number" id="fxApple" value="8.25" step="0.25"></div>
+        <div class="field"><label for="fxMail">Envoi d'emails + nom de domaine<span class="src">€, hypothèse</span></label><input type="number" id="fxMail" value="20" step="5"></div>
+        <div class="field"><label for="fxCompta">Expert-comptable<span class="src">€, hypothèse</span></label><input type="number" id="fxCompta" value="100" step="10"></div>
+        <div class="field"><label for="fxInsur">Assurance responsabilité civile pro<span class="src">€, hypothèse</span></label><input type="number" id="fxInsur" value="40" step="5"></div>
+        <div class="field"><label for="fxMarketing">Commercialisation (pub, salons, démarchage)<span class="src">€, à décider</span></label><input type="number" id="fxMarketing" value="300" step="50"></div>
+        <div class="field"><label for="fxDev">Développement et maintenance (ton temps ou un prestataire)<span class="src">€, à décider</span></label><input type="number" id="fxDev" value="0" step="100"></div>
+      </div>
+      <div class="panel">
+        <strong>Une seule fois, au lancement</strong>
+        <div class="field"><label for="ooLegal">Relecture juridique (CGU, confidentialité)<span class="src">€, hypothèse</span></label><input type="number" id="ooLegal" value="1500" step="100"></div>
+        <div class="field"><label for="ooCompany">Création de la structure<span class="src">€, hypothèse</span></label><input type="number" id="ooCompany" value="300" step="50"></div>
+        <div class="field"><label for="ooGoogle">Compte Google Play<span class="src">25 $ une fois</span></label><input type="number" id="ooGoogle" value="23" step="1"></div>
+        <div class="field"><label for="ooDesign">Icône, visuels des stores<span class="src">€, hypothèse</span></label><input type="number" id="ooDesign" value="300" step="50"></div>
+        <div class="field"><label for="ooDev">Développement jusqu'au lancement<span class="src">€, 0 si tu le fais toi-même</span></label><input type="number" id="ooDev" value="0" step="500"></div>
+        <p class="note">RevenueCat est gratuit jusqu'à 2 500 $ de revenus mensuels, puis prend 1 % (relevé revenuecat.com/pricing) : c'est calculé automatiquement.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-rules">
+    <h2 id="t-rules">Les règles du modèle</h2>
+    <ul class="rules">
+      <li>Le modèle de base est le moins cher (Haiku). Choisir un modèle au-dessus de son offre déclenche un avertissement avant l'envoi : « Ce message est hors forfait : 0,10 €. Continuer ? »</li>
+      <li>Le hors forfait est <strong>prépayé</strong> (crédit acheté à l'avance) : les stores ne permettent pas de facturer après coup comme un opérateur téléphonique, et ça évite toute mauvaise surprise.</li>
+      <li>Un message de crise est toujours traité par le meilleur modèle, jamais facturé, jamais bloqué par un quota. Le bouton d'urgence reste gratuit pour tous.</li>
+      <li>Robin des Bois : la marge des offres payantes finance l'offre Gratuite et l'offre Solidaire (étudiants, jeunes, petits revenus).</li>
+    </ul>
+    <div class="toolbar">
+      <button type="button" class="primary" id="reset">Revenir aux hypothèses de départ</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const MODELS = [
+  { id: "haiku", name: "Haiku 5.5", inp: 0.10, out: 0.50, read: 0.01, note: "lecture cache : hypothèse 10 % de l'entrée" },
+  { id: "sonnet", name: "Sonnet 5.5", inp: 2.00, out: 10.00, read: 0.10, note: "" },
+  { id: "opus", name: "Opus 5.5", inp: 4.00, out: 20.00, read: 0.20, note: "" },
+];
+// nom, prix, msgs/jour, % Sonnet, % Opus (le reste = Haiku), utilisation %, utilisateurs, b2b, précision
+const PLANS = [
+  ["Gratuit", 0, 5, 0, 0, 40, 2000, false, "Pour tous, sans carte bancaire"],
+  ["Solidaire", 0, 20, 0, 0, 40, 300, false, "Étudiants, jeunes, petits revenus"],
+  ["Essentiel", 4.99, 25, 0, 0, 40, 150, false, "tout en Haiku"],
+  ["Essentiel +", 7.99, 25, 60, 0, 40, 60, false, "dont 15 par jour en Sonnet"],
+  ["Premium", 12.99, 50, 45, 0, 40, 30, false, "dont 22 par jour en Sonnet"],
+  ["Premium +", 19.99, 50, 45, 15, 40, 10, false, "dont 22 Sonnet et 7 Opus par jour"],
+  ["Ultra", 29.99, 100, 55, 0, 40, 5, false, "dont 55 par jour en Sonnet"],
+  ["Ultra +", 49.99, 100, 50, 25, 40, 2, false, "dont 50 Sonnet et 25 Opus par jour"],
+  ["Entreprise (par salarié)", 19.99, 100, 50, 0, 30, 0, true, "HT, facturé à l'entreprise, 50 % employeur possible ; dont 50 par jour en Sonnet"],
+];
+const VAT = 0.20, STORE = 0.15, DAYS = 30;
+const KEY = "psygpt-modele-v3";
+const $ = (id) => document.getElementById(id);
+const eur = (v, d = 2) => (v < 0 ? "−" : "") + Math.abs(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) + " €";
+const cents = (v) => (v * 100).toLocaleString("fr-FR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + " c";
+const num = (id) => parseFloat($(id).value) || 0;
+
+function buildRows() {
+  $("modelRows").innerHTML = MODELS.map((m) =>
+    `<tr><td>${m.name}${m.note ? `<span class="sub">${m.note}</span>` : ""}</td><td class="calc">${m.inp.toFixed(2)}</td><td class="calc">${m.out.toFixed(2)}</td><td class="calc" id="cost-${m.id}"></td><td id="rule-${m.id}"></td></tr>`).join("");
+  $("planRows").innerHTML = PLANS.map((p, i) => `
+    <tr>
+      <td>${p[0]}${p[8] ? `<span class="sub">${p[8]}</span>` : ""}</td>
+      <td><input type="number" id="p${i}-price" value="${p[1]}" step="0.5" aria-label="Prix ${p[0]}"></td>
+      <td><input type="number" id="p${i}-quota" value="${p[2]}" step="5" aria-label="Messages par jour ${p[0]}"></td>
+      <td><input type="number" id="p${i}-sonnet" value="${p[3]}" step="10" aria-label="Part Sonnet ${p[0]}"></td>
+      <td><input type="number" id="p${i}-opus" value="${p[4]}" step="10" aria-label="Part Opus ${p[0]}"></td>
+      <td><input type="number" id="p${i}-use" value="${p[5]}" step="5" aria-label="Utilisation ${p[0]}"></td>
+      <td><input type="number" id="p${i}-users" value="${p[6]}" step="10" aria-label="Utilisateurs ${p[0]}"></td>
+      <td class="calc" id="p${i}-net"></td><td class="calc" id="p${i}-cost"></td><td class="calc" id="p${i}-margin"></td><td class="calc" id="p${i}-worst"></td>
+    </tr>`).join("");
+}
+
+function costPerMessage(m) {
+  const fx = num("usdEur"), hit = num("cacheHit") / 100;
+  const prefix = num("tokPrompt") + num("tokHist");
+  const usd = (prefix * hit * m.read + prefix * (1 - hit) * m.inp * 1.25 + num("tokNew") * m.inp + num("tokOut") * m.out) / 1e6;
+  return usd * fx;
+}
+
+function compute() {
+  const unit = Object.fromEntries(MODELS.map((m) => [m.id, costPerMessage(m)]));
+  for (const m of MODELS) {
+    $(`cost-${m.id}`).textContent = cents(unit[m.id]) + " · " + eur(unit[m.id], 4);
+    const ok = unit[m.id] <= 0.001;
+    $(`rule-${m.id}`).innerHTML = `<span class="pill ${ok ? "good" : "warn"}">${ok ? "inclus" : "hors forfait"}</span>`;
+  }
+  const crisis = num("crisisPct") / 100;
+  let totUsers = 0, totNet = 0, totCost = 0, freeCost = 0, paidMargin = 0, revenueTTC = 0;
+  const worstLoss = [];
+  PLANS.forEach((p, i) => {
+    const price = num(`p${i}-price`), quota = num(`p${i}-quota`);
+    const pS = Math.min(num(`p${i}-sonnet`), 100) / 100, pO = Math.min(num(`p${i}-opus`), 100 - pS * 100) / 100;
+    const use = num(`p${i}-use`) / 100, users = num(`p${i}-users`);
+    const b2b = p[7];
+    const net = b2b ? price : (price / (1 + VAT)) * (1 - STORE);
+    const blended = (1 - crisis) * (pS * unit.sonnet + pO * unit.opus + (1 - pS - pO) * unit.haiku) + crisis * unit.opus;
+    const msgs = quota * DAYS;
+    const cost = msgs * use * blended, worst = msgs * blended;
+    const margin = net - cost, worstMargin = net - worst;
+    $(`p${i}-net`).textContent = eur(net);
+    $(`p${i}-cost`).textContent = eur(cost);
+    $(`p${i}-margin`).innerHTML = `<span class="${margin < 0 ? "neg" : "pos"}">${eur(margin)}</span>`;
+    $(`p${i}-worst`).innerHTML = `<span class="${worstMargin < 0 ? "neg" : "pos"}">${eur(worstMargin)}</span>`;
+    totUsers += users; totNet += net * users; totCost += cost * users;
+    revenueTTC += (b2b ? price * (1 + VAT) : price) * users;
+    if (price === 0) freeCost += cost * users; else { paidMargin += margin * users; if (worstMargin < 0) worstLoss.push(p[0]); }
+  });
+  $("totUsers").textContent = totUsers.toLocaleString("fr-FR");
+  $("totNet").textContent = eur(totNet); $("totCost").textContent = eur(totCost);
+  $("totMargin").innerHTML = `<span class="${totNet - totCost < 0 ? "neg" : "pos"}">${eur(totNet - totCost)}</span>`;
+
+  // Recharges, hors forfait
+  const rechNet = (num("rechPrice") / (1 + VAT)) * (1 - STORE);
+  const rechCost = num("rechMsgs") * unit.haiku;
+  const rechMargin = (rechNet - rechCost) * num("rechCount");
+  const ovN = num("ovCount") / 2;
+  const ovNetS = (num("ovSonnet") / (1 + VAT)) * (1 - STORE), ovNetO = (num("ovOpus") / (1 + VAT)) * (1 - STORE);
+  const ovMargin = ovN * (ovNetS - unit.sonnet) + ovN * (ovNetO - unit.opus);
+  revenueTTC += num("rechPrice") * num("rechCount") + ovN * (num("ovSonnet") + num("ovOpus"));
+  $("extraOut").innerHTML = `
+    <div class="field"><span>Une recharge : net encaissé / coût IA</span><span class="calc">${eur(rechNet)} / ${eur(rechCost, 3)}</span></div>
+    <div class="field"><span>Marge sur les recharges du mois</span><span class="calc pos">${eur(rechMargin)}</span></div>
+    <div class="field"><span>Hors forfait Sonnet : marge par message</span><span class="calc ${ovNetS - unit.sonnet < 0 ? "neg" : "pos"}">${eur(ovNetS - unit.sonnet, 3)}</span></div>
+    <div class="field"><span>Hors forfait Opus : marge par message</span><span class="calc ${ovNetO - unit.opus < 0 ? "neg" : "pos"}">${eur(ovNetO - unit.opus, 3)}</span></div>
+    <div class="field"><span>Marge hors forfait du mois</span><span class="calc">${eur(ovMargin)}</span></div>
+    <p class="note">Un utilisateur Gratuit coûte en moyenne ${eur(num("p0-quota") * DAYS * num("p0-use") / 100 * ((1 - crisis) * unit.haiku + crisis * unit.opus), 3)} par mois en IA.</p>`;
+
+  // Fixes
+  const usd = num("usdEur");
+  const fixed = num("fxSupabase") * usd + num("fxExpo") * usd + num("fxApple") * usd + num("fxMail") + num("fxCompta") + num("fxInsur") + num("fxMarketing") + num("fxDev");
+  const revenueUSD = revenueTTC / (1 + VAT) / usd;
+  const rc = revenueUSD > 2500 ? revenueUSD * 0.01 * usd : 0;
+  const oneOff = num("ooLegal") + num("ooCompany") + num("ooGoogle") + num("ooDesign") + num("ooDev");
+  const result = (totNet - totCost) + rechMargin + ovMargin - fixed - rc;
+
+  const essMargin = parseFloat(($("p2-price").value / (1 + VAT)) * (1 - STORE)) - num("p2-quota") * DAYS * num("p2-use") / 100 * ((1 - crisis) * unit.haiku + crisis * unit.opus);
+  const freeUnit = num("p0-quota") * DAYS * num("p0-use") / 100 * ((1 - crisis) * unit.haiku + crisis * unit.opus);
+  const robin = freeUnit > 0 ? Math.floor(essMargin / freeUnit) : 0;
+  const payback = result > 0 ? Math.ceil(oneOff / result) : null;
+
+  $("kpis").innerHTML = [
+    ["Résultat mensuel", eur(result), result < 0 ? "neg" : "pos"],
+    ["Marge des offres payantes", eur(paidMargin), ""],
+    ["Coût IA des offres gratuites", eur(freeCost), ""],
+    ["Coûts fixes du mois", eur(fixed + rc), ""],
+    ["1 abonné Essentiel finance", robin.toLocaleString("fr-FR") + " gratuits", ""],
+    ["Lancement remboursé en", payback ? payback + " mois" : "—", ""],
+    ["Offres en perte si quota épuisé", worstLoss.length ? worstLoss.join(", ") : "aucune", worstLoss.length ? "neg" : "pos"],
+  ].map(([l, v, c]) => `<div class="kpi"><span class="label">${l}</span><span class="value ${c}">${v}</span></div>`).join("");
+
+  const v = $("verdict");
+  const status = result >= 0 ? (result < fixed * 0.1 ? "warn" : "good") : (result > -fixed * 0.2 ? "warn" : "bad");
+  v.className = "verdict " + status;
+  v.textContent = status === "good" ? "Bénéficiaire : les offres payantes couvrent les gratuits et tous les coûts fixes."
+    : status === "warn" ? (result >= 0 ? "À l'équilibre : ça tient, sans marge de sécurité." : "Légère perte : proche de l'équilibre, à corriger par les prix, les quotas ou le nombre d'abonnés.")
+    : "Déficitaire : les coûts fixes dépassent la marge. Regarde d'abord la commercialisation et le nombre d'abonnés.";
+  save();
+}
+
+function save() {
+  try {
+    const data = {};
+    document.querySelectorAll("input, select").forEach((el) => (data[el.id] = el.value));
+    localStorage.setItem(KEY, JSON.stringify(data));
+  } catch (e) { /* stockage indisponible : on continue sans */ }
+}
+function restore() {
+  try {
+    const data = JSON.parse(localStorage.getItem(KEY) || "{}");
+    for (const [id, val] of Object.entries(data)) if ($(id)) $(id).value = val;
+  } catch (e) { /* rien à restaurer */ }
+}
+
+buildRows();
+restore();
+document.addEventListener("input", compute);
+document.addEventListener("change", compute);
+$("reset").addEventListener("click", () => {
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  document.querySelectorAll("input").forEach((el) => (el.value = el.defaultValue));
+  document.querySelectorAll("select option").forEach((o) => (o.selected = o.defaultSelected));
+  compute();
+});
+compute();
+</script>

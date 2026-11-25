@@ -1,0 +1,61 @@
+name: security
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tout l'historique : une clé supprimée d'un commit reste une fuite
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.28.0
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+      - name: Scan full history
+        run: gitleaks git --redact -v .
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.186.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep (bloquant sur ERROR)
+        run: semgrep scan --config p/default --config p/typescript --config p/react --config p/secrets --severity ERROR --error .
+
+  consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Table de crise app == serveur
+        run: ./scripts/sync-crisis.sh --check
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check des Edge Functions
+        working-directory: supabase/functions
+        run: deno check chat/index.ts delete-account/index.ts
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: npm audit (high+)
+        run: |
+          if [ -f app/package-lock.json ]; then
+            cd app && npm ci --ignore-scripts && npm audit --audit-level=high
+          else
+            echo "Pas encore d'app/package-lock.json — étape ignorée."
+          fi
