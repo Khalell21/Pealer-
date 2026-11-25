@@ -25,6 +25,8 @@ function decodePrompt(): string {
 
 // Quota gratuit par jour (0 = illimité). Le prix n'est pas encore fixé : réglable sans redéployer le code.
 const FREE_MESSAGES_PER_DAY = Number(Deno.env.get("FREE_MESSAGES_PER_DAY") ?? "0");
+// Anti-détournement : au-delà, l'usage ne ressemble plus à une conversation humaine.
+const MAX_MESSAGES_PER_MINUTE = Number(Deno.env.get("MAX_MESSAGES_PER_MINUTE") ?? "8");
 
 type ChatBody = { messages: Anthropic.MessageParam[] };
 
@@ -57,14 +59,17 @@ Deno.serve(async (req) => {
   const minor = profile?.is_minor === true;
 
   // Compteur d'usage (sans contenu), côté serveur.
-  const { data: usage, error: usageError } = await supabase.rpc("record_message").single<{ messages_today: number; active_days_30d: number }>();
+  const { data: usage, error: usageError } = await supabase.rpc("record_message").single<{ messages_today: number; active_days_30d: number; messages_last_minute: number }>();
   if (usageError || !usage) return json({ error: "usage_unavailable" }, 500);
 
   const lastUser = textOf(messages[messages.length - 1]);
   const highRisk = isHighRisk(lastUser);
 
   // 3) Contexte opérateur variable APRÈS le prompt fixe (le prompt fixe reste en cache).
-  // Le quota ne bloque JAMAIS un message de crise.
+  // Les limites ne bloquent JAMAIS un message de crise.
+  if (usage.messages_last_minute > MAX_MESSAGES_PER_MINUTE && !highRisk) {
+    return json({ error: "rate_limited", crisis_resource: crisisResource(country, minor) }, 429);
+  }
   if (FREE_MESSAGES_PER_DAY > 0 && usage.messages_today > FREE_MESSAGES_PER_DAY && !highRisk) {
     // TODO RevenueCat : vérifier l'entitlement côté serveur avant de refuser.
     return json({ error: "quota_reached", crisis_resource: crisisResource(country, minor) }, 402);

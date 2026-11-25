@@ -268,7 +268,9 @@ function Chat({ profile }: { profile: Profile }) {
     setSending(true);
     try {
       const { status, data } = await callFunction<ChatReply>(CHAT_URL, { messages: next });
-      if (status === 402) {
+      if (status === 429) {
+        setTurns([...next, { role: "assistant", content: "Tu écris très vite : prends une petite pause d'une minute, je suis toujours là." }]);
+      } else if (status === 402) {
         setTurns([...next, { role: "assistant", content: "Tu as atteint la limite gratuite du jour. L'aide urgente reste disponible en haut." }]);
       } else {
         setTurns([...next, { role: "assistant", content: data.reply ?? crisisResource(profile.country ?? undefined, profile.is_minor) }]);
