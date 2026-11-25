@@ -21,6 +21,9 @@ declare uid uuid := auth.uid();
 begin
   if uid is null then raise exception 'not authenticated'; end if;
 
+  -- Minimisation (RGPD) : les compteurs de plus de 30 jours ne servent plus, on les efface.
+  delete from public.usage_daily d where d.user_id = uid and d.day <= current_date - 30;
+
   insert into public.usage_daily as u (user_id, day, messages) values (uid, current_date, 1)
     on conflict (user_id, day) do update set messages = u.messages + 1;
 
