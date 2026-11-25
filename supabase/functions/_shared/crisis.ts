@@ -19,8 +19,10 @@ const HIGH_RISK_PATTERNS: RegExp[] = [
   /(en finir|me tuer|me suicider|suicide|mettre fin [àa] mes jours)/i,
   /(plus envie de vivre|envie de mourir|disparaître pour de bon)/i,
   /(me faire du mal|me scarifier|me couper)/i,
+  // Recherche de méthode : signal de risque élevé, quel que soit l'habillage (fiction, profession…)
+  /(mortel|mortelle|létal|letal|létalité|overdose|surdose|dose fatale)/i,
   // EN — l'app est multilingue
-  /(kill myself|end it all|suicid|better off without me|want to die|self[- ]harm)/i,
+  /(kill myself|end it all|suicid|better off without me|want to die|self[- ]harm|lethal dose|overdose)/i,
 ];
 
 export function isHighRisk(text: string): boolean {

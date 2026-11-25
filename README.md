@@ -175,6 +175,9 @@ cd app && npx expo start                   # i = iOS, a = Android, w = navigateu
   `DENO_SERVE_ADDRESS=tcp:127.0.0.1:8001 ./scripts/dev-function.sh delete-account`, avec les URL de `app/.env.example`.
 - Sans `ANTHROPIC_API_KEY`, l'app marche en mode dégradé : message sûr + numéros d'aide du pays.
 - Après modification de `supabase/functions/_shared/crisis.ts` : `./scripts/sync-crisis.sh`.
+- Tests de bout en bout (auth, RLS, crise, limites, suppression) : `./scripts/test-local.sh`
+- Conversations types (sécurité des réponses de l'IA) : `./scripts/eval.sh` → rapport dans `evals/results/`.
+  À relancer après **chaque** modification du prompt. Sans clé API, seul le filet de crise est testé.
 
 ## 8. ➡️ Générer une app
 

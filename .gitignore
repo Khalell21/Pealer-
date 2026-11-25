@@ -36,3 +36,6 @@ prompts/private/
 
 # Captures de test locales
 screenshots/
+
+# Rapports d evals (sorties du modèle)
+evals/results/
